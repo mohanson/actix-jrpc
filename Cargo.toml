@@ -1,0 +1,23 @@
+[package]
+name = "actix-jrpc"
+version = "0.1.0"
+authors = ["mohanson <mohanson@outlook.com>"]
+edition = "2018"
+
+[dependencies]
+bytes = "*"
+env_logger = "*"
+actix = "0.7"
+actix-web = "0.7"
+futures = "*"
+serde_derive = "*"
+serde = "*"
+slog = "*"
+slog-term = "*"
+log = "*"
+json = "*"
+serde_json = "*"
+tokio-core = "*"
+tokio-codec = "*"
+tokio-io = "*"
+tokio-jsonrpc = "*"
