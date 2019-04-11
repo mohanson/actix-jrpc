@@ -1,9 +1,7 @@
 use super::convention::{ErrorData, Request, JSONRPC_VERSION};
 use json::JsonValue;
 
-
-
-fn rpc_parse_method(recv_data: &json::object::Object) -> Option<String> {
+fn parse_method(recv_data: &json::object::Object) -> Option<String> {
     let method = recv_data.get("method");
     let method = match method {
         Some(some) => some,
@@ -16,7 +14,7 @@ fn rpc_parse_method(recv_data: &json::object::Object) -> Option<String> {
     Some(method)
 }
 
-fn rpc_parse_params(recv_data: &json::object::Object) -> Option<Vec<JsonValue>> {
+fn parse_params(recv_data: &json::object::Object) -> Option<Vec<JsonValue>> {
     let params = recv_data.get("params");
     let params = match params {
         Some(some) => some,
@@ -61,13 +59,13 @@ pub fn parse(data: &[u8]) -> Result<Request, ErrorData> {
         Some(some) => some,
         None => return Err(ErrorData::std(-32600)),
     };
-    let method = match rpc_parse_method(&recv) {
+    let method = match parse_method(&recv) {
         Some(some) => some,
         None => {
             return Err(ErrorData::std(-32601));
         }
     };
-    let params = match rpc_parse_params(&recv) {
+    let params = match parse_params(&recv) {
         Some(some) => some,
         None => {
             return Err(ErrorData::std(-32602));

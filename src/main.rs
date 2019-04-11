@@ -41,13 +41,8 @@ fn rpc_main(req: HttpRequest<AppState>) -> impl Future<Item = HttpResponse, Erro
                 }
                 _ => {
                     result.error = Some(core::ErrorData::std(-32601));
-                    return Ok(HttpResponse::Ok()
-                        .content_type("application/json")
-                        .body(result.json().dump()));
                 }
             };
-
-            info!("{:?}", req);
 
             Ok(HttpResponse::Ok()
                 .content_type("application/json")
