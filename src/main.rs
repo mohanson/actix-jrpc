@@ -3,50 +3,50 @@ use actix_web::{
     middleware, server, App, AsyncResponder, Error, HttpMessage, HttpRequest, HttpResponse,
 };
 use futures::{Future, Stream};
-use json::JsonValue;
-use log::info;
+use serde_json;
+use serde_json::Value;
 use std::sync::Arc;
 
-mod core;
+mod convention;
 
 fn rpc_main(req: HttpRequest<AppState>) -> impl Future<Item = HttpResponse, Error = Error> {
     req.payload()
         .concat2()
         .from_err()
         .and_then(move |body| {
-            let reqjson = core::parse(body.as_ref());
-            let reqjson = match reqjson {
+            let reqjson: convention::Request = match serde_json::from_slice(body.as_ref()) {
                 Ok(ok) => ok,
-                Err(e) => {
-                    let r = core::Response {
-                        jsonrpc: String::from(core::JSONRPC_VERSION),
-                        result: JsonValue::Null,
-                        error: Some(e),
-                        id: JsonValue::Null,
+                Err(_) => {
+                    let r = convention::Response {
+                        jsonrpc: String::from(convention::JSONRPC_VERSION),
+                        result: Value::Null,
+                        error: Some(convention::ErrorData::std(-32700)),
+                        id: Value::Null,
                     };
                     return Ok(HttpResponse::Ok()
                         .content_type("application/json")
-                        .body(r.json().dump()));
+                        .body(&serde_json::to_string(&r).unwrap()));
                 }
             };
+            println!("{:?}", reqjson);
 
             let app_state = req.state();
-            let mut result = core::Response::default();
+            let mut result = convention::Response::default();
             result.id = reqjson.id.clone();
 
             match reqjson.method.as_str() {
                 "peerCount" => {
                     let r = app_state.network.peer_count();
-                    result.result = JsonValue::from(r);
+                    result.result = Value::from(r);
                 }
                 _ => {
-                    result.error = Some(core::ErrorData::std(-32601));
+                    result.error = Some(convention::ErrorData::std(-32601));
                 }
             };
 
             Ok(HttpResponse::Ok()
                 .content_type("application/json")
-                .body(result.json().dump()))
+                .body(result.dump()))
         })
         .responder()
 }

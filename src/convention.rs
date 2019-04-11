@@ -1,12 +1,13 @@
-/// JSON-RPC 2.0 Specification
-/// See: https://www.jsonrpc.org/specification
-use json::JsonValue;
+//! JSON-RPC 2.0 Specification
+//! See: https://www.jsonrpc.org/specification
+use serde_derive::{Deserialize, Serialize};
+use serde_json::Value;
 
 pub static JSONRPC_VERSION: &str = "2.0";
 
 /// When a rpc call encounters an error, the Response Object MUST contain the
 /// error member with a value that is a Object with the following members:
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ErrorData {
     /// A Number that indicates the error type that occurred. This MUST be an integer.
     pub code: i32,
@@ -19,7 +20,7 @@ pub struct ErrorData {
     /// about the error. This may be omitted. The value of this member is
     /// defined by the Server (e.g. detailed error information, nested errors
     /// etc.).
-    pub data: JsonValue,
+    pub data: Value,
 }
 
 impl ErrorData {
@@ -27,7 +28,7 @@ impl ErrorData {
         Self {
             code: code,
             message: String::from(message),
-            data: JsonValue::Null,
+            data: Value::Null,
         }
     }
 
@@ -49,23 +50,14 @@ impl ErrorData {
         }
     }
 
-    /// Prints out the value as JSON Object.
-    pub fn json(&self) -> JsonValue {
-        let mut j = JsonValue::new_object();
-        j["code"] = self.code.into();
-        j["message"] = JsonValue::String(self.message.clone());
-        j["data"] = self.data.clone();
-        j
-    }
-
     /// Prints out the value as JSON string.
     pub fn dump(&self) -> String {
-        self.json().dump()
+        serde_json::to_string(self).expect("Should never failed")
     }
 }
 
 /// A rpc call is represented by sending a Request object to a Server.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Request {
     /// A String specifying the version of the JSON-RPC protocol. MUST be exactly "2.0".
     pub jsonrpc: String,
@@ -77,34 +69,24 @@ pub struct Request {
 
     /// A Structured value that holds the parameter values to be used during the invocation of the method. This member
     /// MAY be omitted.
-    pub params: Vec<JsonValue>,
+    pub params: Vec<Value>,
 
     /// An identifier established by the Client that MUST contain a String, Number, or NULL value if included. If it is
     /// not included it is assumed to be a notification. The value SHOULD normally not be Null [1] and Numbers SHOULD
     /// NOT contain fractional parts.
-    pub id: JsonValue,
+    pub id: Value,
 }
 
 impl Request {
-    /// Prints out the value as JSON Object.
-    pub fn json(&self) -> JsonValue {
-        let mut j = JsonValue::new_object();
-        j["jsonrpc"] = JsonValue::String(self.jsonrpc.clone());
-        j["method"] = JsonValue::String(self.method.clone());
-        j["params"] = JsonValue::Array(self.params.clone());
-        j["id"] = self.id.clone();
-        j
-    }
-
     /// Prints out the value as JSON string.
     pub fn dump(&self) -> String {
-        self.json().dump()
+        serde_json::to_string(self).expect("Should never failed")
     }
 }
 
 /// When a rpc call is made, the Server MUST reply with a Response, except for in the case of Notifications. The
 /// Response is expressed as a single JSON Object, with the following members:
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Response {
     /// A String specifying the version of the JSON-RPC protocol. MUST be exactly "2.0".
     pub jsonrpc: String,
@@ -112,7 +94,7 @@ pub struct Response {
     /// This member is REQUIRED on success.
     /// This member MUST NOT exist if there was an error invoking the method.
     /// The value of this member is determined by the method invoked on the Server.
-    pub result: JsonValue,
+    pub result: Value,
 
     // This member is REQUIRED on error.
     // This member MUST NOT exist if there was no error triggered during invocation.
@@ -123,20 +105,13 @@ pub struct Response {
     /// It MUST be the same as the value of the id member in the Request Object.
     /// If there was an error in detecting the id in the Request object (e.g. Parse error/Invalid Request),
     /// it MUST be Null.
-    pub id: JsonValue,
+    pub id: Value,
 }
 
 impl Response {
-    /// Prints out the value as JSON Object.
-    pub fn json(&self) -> JsonValue {
-        let mut j = JsonValue::new_object();
-        j["jsonrpc"] = JsonValue::String("2.0".into());
-        j["result"] = self.result.clone();
-        if let Some(some) = &self.error {
-            j["error"] = some.json();
-        }
-        j["id"] = self.id.clone();
-        j
+    /// Prints out the value as JSON string.
+    pub fn dump(&self) -> String {
+        serde_json::to_string(self).expect("Should never failed")
     }
 }
 
@@ -144,9 +119,9 @@ impl Default for Response {
     fn default() -> Self {
         Self {
             jsonrpc: JSONRPC_VERSION.into(),
-            result: JsonValue::Null,
+            result: Value::Null,
             error: None,
-            id: JsonValue::Null,
+            id: Value::Null,
         }
     }
 }
