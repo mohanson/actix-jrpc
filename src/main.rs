@@ -3,10 +3,40 @@ use actix_web::{
     middleware, server, App, AsyncResponder, Error, HttpMessage, HttpRequest, HttpResponse,
 };
 use futures::{Future, Stream};
-use json::object;
 use json::JsonValue;
 use log::info;
 use std::sync::Arc;
+
+mod core;
+
+fn rpc_main(req: HttpRequest<AppState>) -> impl Future<Item = HttpResponse, Error = Error> {
+    req.payload()
+        .concat2()
+        .from_err()
+        .and_then(move |body| {
+            let req = core::parse(body.as_ref());
+            let req = match req {
+                Ok(ok) => ok,
+                Err(e) => {
+                    let r = core::Response {
+                        jsonrpc: String::from(core::JSONRPC_VERSION),
+                        result: JsonValue::Null,
+                        error: Some(e),
+                        id: JsonValue::Null,
+                    };
+                    return Ok(HttpResponse::Ok()
+                        .content_type("application/json")
+                        .body(r.json().dump()));
+                }
+            };
+            info!("{:?}", req);
+
+            Ok(HttpResponse::Ok()
+                .content_type("application/json")
+                .body(req.json().dump()))
+        })
+        .responder()
+}
 
 pub trait ImplNetwork {
     fn peer_count(&self) -> u32;
@@ -29,36 +59,6 @@ impl AppState {
     }
 }
 
-// fn rpc_peer_count(req: HttpRequest<AppState>) -> impl Future<Item = HttpResponse, Error = Error> {
-// }
-
-fn echo(req: HttpRequest<AppState>) -> impl Future<Item = HttpResponse, Error = Error> {
-    req.payload()
-        .concat2()
-        .from_err()
-        .and_then(move |body| {
-            let result = json::parse(std::str::from_utf8(&body).unwrap());
-            println!("{:?}", result);
-            let injson: JsonValue = match result {
-                Ok(v) => v,
-                Err(e) => object! {"err" => e.to_string() },
-            };
-            let obj = match injson {
-                JsonValue::Object(ref obj) => obj,
-                _ => panic!("No entry"),
-            };
-            info!("{:?}", obj.get("jsonrpc").unwrap());
-            info!("{:?}", obj.get("method").unwrap());
-            info!("{:?}", obj.get("params").unwrap());
-            info!("{:?}", obj.get("id").unwrap().as_i32().unwrap());
-
-            Ok(HttpResponse::Ok()
-                .content_type("application/json")
-                .body(injson.dump()))
-        })
-        .responder()
-}
-
 fn main() {
     std::env::set_var("RUST_LOG", "info");
     env_logger::init();
@@ -70,7 +70,7 @@ fn main() {
         let app_state = AppState::new(network.clone());
         App::with_state(app_state)
             .middleware(middleware::Logger::default())
-            .resource("/", |r| r.method(Method::POST).with_async(echo))
+            .resource("/", |r| r.method(Method::POST).with_async(rpc_main))
     })
     .bind("127.0.0.1:8080")
     .unwrap()
