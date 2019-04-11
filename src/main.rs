@@ -14,8 +14,8 @@ fn rpc_main(req: HttpRequest<AppState>) -> impl Future<Item = HttpResponse, Erro
         .concat2()
         .from_err()
         .and_then(move |body| {
-            let req = core::parse(body.as_ref());
-            let req = match req {
+            let reqjson = core::parse(body.as_ref());
+            let reqjson = match reqjson {
                 Ok(ok) => ok,
                 Err(e) => {
                     let r = core::Response {
@@ -29,11 +29,29 @@ fn rpc_main(req: HttpRequest<AppState>) -> impl Future<Item = HttpResponse, Erro
                         .body(r.json().dump()));
                 }
             };
+
+            let app_state = req.state();
+            let mut result = core::Response::default();
+            result.id = reqjson.id.clone();
+
+            match reqjson.method.as_str() {
+                "peerCount" => {
+                    let r = app_state.network.peer_count();
+                    result.result = JsonValue::from(r);
+                }
+                _ => {
+                    result.error = Some(core::ErrorData::std(-32601));
+                    return Ok(HttpResponse::Ok()
+                        .content_type("application/json")
+                        .body(result.json().dump()));
+                }
+            };
+
             info!("{:?}", req);
 
             Ok(HttpResponse::Ok()
                 .content_type("application/json")
-                .body(req.json().dump()))
+                .body(result.json().dump()))
         })
         .responder()
 }

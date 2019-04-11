@@ -2,6 +2,8 @@
 /// See: https://www.jsonrpc.org/specification
 use json::JsonValue;
 
+pub static JSONRPC_VERSION: &str = "2.0";
+
 /// When a rpc call encounters an error, the Response Object MUST contain the
 /// error member with a value that is a Object with the following members:
 #[derive(Debug)]
@@ -135,5 +137,16 @@ impl Response {
         }
         j["id"] = self.id.clone();
         j
+    }
+}
+
+impl Default for Response {
+    fn default() -> Self {
+        Self {
+            jsonrpc: JSONRPC_VERSION.into(),
+            result: JsonValue::Null,
+            error: None,
+            id: JsonValue::Null,
+        }
     }
 }

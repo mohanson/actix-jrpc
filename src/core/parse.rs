@@ -1,7 +1,7 @@
-use super::convention::{ErrorData, Request};
+use super::convention::{ErrorData, Request, JSONRPC_VERSION};
 use json::JsonValue;
 
-pub static JSONRPC_VERSION: &str = "2.0";
+
 
 fn rpc_parse_method(recv_data: &json::object::Object) -> Option<String> {
     let method = recv_data.get("method");
