@@ -29,7 +29,6 @@ fn rpc_main(req: HttpRequest<AppState>) -> impl Future<Item = HttpResponse, Erro
                         .body(&serde_json::to_string(&r).unwrap()));
                 }
             };
-            println!("{:?}", reqjson);
 
             let app_state = req.state();
             let mut result = convention::Response::default();
