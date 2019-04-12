@@ -5,7 +5,6 @@ authors = ["mohanson <mohanson@outlook.com>"]
 edition = "2018"
 
 [dependencies]
-bytes = "*"
 env_logger = "*"
 actix = "0.7"
 actix-web = "0.7"
@@ -13,9 +12,4 @@ futures = "*"
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
-json = "*"
 log = "*"
-tokio-core = "*"
-tokio-codec = "*"
-tokio-io = "*"
-tokio-jsonrpc = "*"

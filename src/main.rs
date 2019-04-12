@@ -7,6 +7,7 @@ use serde_json;
 use serde_json::Value;
 use std::sync::Arc;
 
+#[allow(dead_code)]
 mod convention;
 
 fn rpc_main(req: HttpRequest<AppState>) -> impl Future<Item = HttpResponse, Error = Error> {
@@ -35,8 +36,8 @@ fn rpc_main(req: HttpRequest<AppState>) -> impl Future<Item = HttpResponse, Erro
             result.id = reqjson.id.clone();
 
             match reqjson.method.as_str() {
-                "peerCount" => {
-                    let r = app_state.network.peer_count();
+                "ping" => {
+                    let r = app_state.network.ping();
                     result.result = Value::from(r);
                 }
                 _ => {
@@ -52,12 +53,14 @@ fn rpc_main(req: HttpRequest<AppState>) -> impl Future<Item = HttpResponse, Erro
 }
 
 pub trait ImplNetwork {
-    fn peer_count(&self) -> u32;
+    fn ping(&self) -> String;
 }
+
 pub struct ObjNetwork {}
+
 impl ImplNetwork for ObjNetwork {
-    fn peer_count(&self) -> u32 {
-        42
+    fn ping(&self) -> String {
+        String::from("pong")
     }
 }
 

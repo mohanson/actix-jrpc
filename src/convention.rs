@@ -1,5 +1,8 @@
 //! JSON-RPC 2.0 Specification
 //! See: https://www.jsonrpc.org/specification
+use std::error;
+use std::fmt;
+
 use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -53,6 +56,13 @@ impl ErrorData {
     /// Prints out the value as JSON string.
     pub fn dump(&self) -> String {
         serde_json::to_string(self).expect("Should never failed")
+    }
+}
+
+impl error::Error for ErrorData {}
+impl fmt::Display for ErrorData {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({}, {}, {})", self.code, self.message, self.data)
     }
 }
 
