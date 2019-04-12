@@ -26,7 +26,7 @@ fn rpc_main(req: HttpRequest<AppState>) -> impl Future<Item = HttpResponse, Erro
                     };
                     return Ok(HttpResponse::Ok()
                         .content_type("application/json")
-                        .body(&serde_json::to_string(&r).unwrap()));
+                        .body(r.dump()));
                 }
             };
 
