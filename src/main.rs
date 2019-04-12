@@ -74,7 +74,10 @@ impl ImplNetwork for ObjNetwork {
     }
 
     fn wait(&self, d: u64) -> Box<Future<Item = String, Error = Box<error::Error>>> {
-        Delay::new(Duration::from_secs(d)).wait().unwrap();
+        if let Err(e) = Delay::new(Duration::from_secs(d)).wait() {
+            let e: Box<error::Error> = Box::new(e);
+            return Box::new(future::err(e));
+        };
         Box::new(future::ok(String::from("pong")))
     }
 }
