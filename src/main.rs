@@ -2,10 +2,13 @@ use actix_web::http::Method;
 use actix_web::{
     middleware, server, App, AsyncResponder, Error, HttpMessage, HttpRequest, HttpResponse,
 };
-use futures::{Future, Stream};
+use futures::{future, Future, Stream};
+use futures_timer::Delay;
 use serde_json;
 use serde_json::Value;
+use std::error;
 use std::sync::Arc;
+use std::time::Duration;
 
 #[allow(dead_code)]
 mod convention;
@@ -39,6 +42,13 @@ fn rpc_main(req: HttpRequest<AppState>) -> impl Future<Item = HttpResponse, Erro
                     let r = app_state.network.ping();
                     result.result = Value::from(r);
                 }
+                "wait" => match app_state.network.wait(4).wait() {
+                    Ok(ok) => result.result = Value::from(ok),
+                    Err(e) => {
+                        result.error =
+                            Some(convention::ErrorData::new(500, &format!("{:?}", e)[..]))
+                    }
+                },
                 _ => {
                     result.error = Some(convention::ErrorData::std(-32601));
                 }
@@ -53,6 +63,7 @@ fn rpc_main(req: HttpRequest<AppState>) -> impl Future<Item = HttpResponse, Erro
 
 pub trait ImplNetwork {
     fn ping(&self) -> String;
+    fn wait(&self, d: u64) -> Box<Future<Item = String, Error = Box<error::Error>>>;
 }
 
 pub struct ObjNetwork {}
@@ -60,6 +71,11 @@ pub struct ObjNetwork {}
 impl ImplNetwork for ObjNetwork {
     fn ping(&self) -> String {
         String::from("pong")
+    }
+
+    fn wait(&self, d: u64) -> Box<Future<Item = String, Error = Box<error::Error>>> {
+        Delay::new(Duration::from_secs(d)).wait().unwrap();
+        Box::new(future::ok(String::from("pong")))
     }
 }
 
