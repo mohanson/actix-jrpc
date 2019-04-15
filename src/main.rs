@@ -3,10 +3,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
 
-use actix_web::http::Method;
-use actix_web::{
-    middleware, server, App, AsyncResponder, Error, HttpMessage, HttpRequest, HttpResponse,
-};
+use actix_web::{middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use futures::{future, Future, Stream};
 use futures_timer::Delay;
 use serde_json;
@@ -16,39 +13,38 @@ use serde_json::Value;
 mod convention;
 
 /// The main handler for JSONRPC server.
-fn rpc_handler(req: HttpRequest<AppState>) -> impl Future<Item = HttpResponse, Error = Error> {
-    req.payload()
-        .concat2()
-        .from_err()
-        .and_then(move |body| {
-            let reqjson: convention::Request = match serde_json::from_slice(body.as_ref()) {
-                Ok(ok) => ok,
-                Err(_) => {
-                    let r = convention::Response {
-                        jsonrpc: String::from(convention::JSONRPC_VERSION),
-                        result: Value::Null,
-                        error: Some(convention::ErrorData::std(-32700)),
-                        id: Value::Null,
-                    };
-                    return Ok(HttpResponse::Ok()
-                        .content_type("application/json")
-                        .body(r.dump()));
-                }
-            };
-            let app_state = req.state();
-            let mut result = convention::Response::default();
-            result.id = reqjson.id.clone();
-
-            match rpc_select(&app_state, reqjson.method.as_str()) {
-                Ok(ok) => result.result = ok,
-                Err(e) => result.error = Some(e),
+fn rpc_handler(
+    req: HttpRequest,
+    payload: web::Payload,
+) -> impl Future<Item = HttpResponse, Error = Error> {
+    payload.concat2().from_err().and_then(move |body| {
+        let reqjson: convention::Request = match serde_json::from_slice(body.as_ref()) {
+            Ok(ok) => ok,
+            Err(_) => {
+                let r = convention::Response {
+                    jsonrpc: String::from(convention::JSONRPC_VERSION),
+                    result: Value::Null,
+                    error: Some(convention::ErrorData::std(-32700)),
+                    id: Value::Null,
+                };
+                return Ok(HttpResponse::Ok()
+                    .content_type("application/json")
+                    .body(r.dump()));
             }
+        };
+        let app_state = req.app_data().unwrap();
+        let mut result = convention::Response::default();
+        result.id = reqjson.id.clone();
 
-            Ok(HttpResponse::Ok()
-                .content_type("application/json")
-                .body(result.dump()))
-        })
-        .responder()
+        match rpc_select(&app_state, reqjson.method.as_str()) {
+            Ok(ok) => result.result = ok,
+            Err(e) => result.error = Some(e),
+        }
+
+        Ok(HttpResponse::Ok()
+            .content_type("application/json")
+            .body(result.dump()))
+    })
 }
 
 fn rpc_select(app_state: &AppState, method: &str) -> Result<Value, convention::ErrorData> {
@@ -131,11 +127,12 @@ fn main() {
     let network = Arc::new(RwLock::new(ObjNetwork::new()));
 
     let sys = actix::System::new("actix_jrpc");
-    server::new(move || {
+    HttpServer::new(move || {
         let app_state = AppState::new(network.clone());
-        App::with_state(app_state)
-            .middleware(middleware::Logger::default())
-            .resource("/", |r| r.method(Method::POST).with_async(rpc_handler))
+        App::new()
+            .data(app_state)
+            .wrap(middleware::Logger::default())
+            .service(web::resource("/").route(web::post().to_async(rpc_handler)))
     })
     .bind("127.0.0.1:8080")
     .unwrap()
