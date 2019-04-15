@@ -29,7 +29,7 @@ pub struct ErrorData {
 impl ErrorData {
     pub fn new(code: i32, message: &str) -> Self {
         Self {
-            code: code,
+            code,
             message: String::from(message),
             data: Value::Null,
         }

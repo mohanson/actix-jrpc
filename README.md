@@ -23,3 +23,12 @@ $ curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0", "metho
 $ python tests\test_client.py
 # {'jsonrpc': '2.0', 'result': 'pong', 'error': None, 'id': 1}
 ```
+
+# Methods
+
+- `ping`: Pong immeditely
+- `pong`: Wait `n` seconds, and then pong
+- `get`: Get global count
+- `inc`: Increment global count
+
+See `tests\test_client.py` to get more information.

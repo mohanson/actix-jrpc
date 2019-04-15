@@ -55,21 +55,21 @@ fn rpc_select(app_state: &AppState, method: &str) -> Result<Value, convention::E
     match method {
         "ping" => {
             let r = app_state.network.read().unwrap().ping();
-            return Ok(Value::from(r));
+            Ok(Value::from(r))
         }
         "wait" => match app_state.network.read().unwrap().wait(4).wait() {
-            Ok(ok) => return Ok(Value::from(ok)),
-            Err(e) => return Err(convention::ErrorData::new(500, &format!("{:?}", e)[..])),
+            Ok(ok) => Ok(Value::from(ok)),
+            Err(e) => Err(convention::ErrorData::new(500, &format!("{:?}", e)[..])),
         },
         "get" => {
             let r = app_state.network.read().unwrap().get();
-            return Ok(Value::from(r));
+            Ok(Value::from(r))
         }
         "inc" => {
             app_state.network.write().unwrap().inc();
-            return Ok(Value::Null);
+            Ok(Value::Null)
         }
-        _ => return Err(convention::ErrorData::std(-32601)),
+        _ => Err(convention::ErrorData::std(-32601)),
     }
 }
 
@@ -120,7 +120,7 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(network: Arc<RwLock<ImplNetwork>>) -> Self {
-        Self { network: network }
+        Self { network }
     }
 }
 
